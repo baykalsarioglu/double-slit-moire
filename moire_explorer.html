@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Double-Slit Fringes via Moiré Sampling — Interactive Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#f8f7f4;color:#1a1a1a;font-family:'Source Serif 4',Georgia,serif;min-height:100vh}
+  .hdr{text-align:center;padding:16px 16px 8px;
+    border-bottom:1px solid #d4d0c8}
+  .hdr h1{font-size:1.5rem;font-weight:700;color:#1a1a1a;letter-spacing:-0.02em}
+  .hdr p{font-size:0.8rem;color:#6b6b6b;margin-top:2px;font-style:italic}
+  .wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:12px}
+  canvas{border-radius:2px;border:1px solid #c8c4bc;background:#ffffff}
+  .ctrls{max-width:1200px;margin:0 auto;padding:4px 10px 10px;
+    display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+  .cg{display:flex;align-items:center;gap:5px;
+    background:#efede8;border:1px solid #d4d0c8;
+    border-radius:3px;padding:4px 8px}
+  .cg label{font-size:0.7rem;color:#555;white-space:nowrap;font-family:'Source Serif 4',Georgia,serif}
+  .cg select,.cg input[type=number]{background:#fff;color:#1a1a1a;
+    border:1px solid #bbb;border-radius:2px;
+    padding:2px 4px;font-family:'Source Serif 4',Georgia,serif;font-size:0.75rem;width:auto}
+  .cg select{min-width:100px}
+  .cg input[type=number]{width:55px}
+  input[type=range]{width:80px;accent-color:#2563eb}
+  button{background:#2563eb;color:#fff;
+    border:none;padding:5px 12px;border-radius:3px;font-family:'Source Serif 4',Georgia,serif;
+    font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s}
+  button:hover{background:#1d4ed8}
+  button.on{background:#059669}
+  button.danger{background:#b91c1c}
+  button.danger:hover{background:#991b1b}
+  .toggle{position:relative;width:36px;height:20px;border-radius:10px;
+    background:#aaa;cursor:pointer;border:none;padding:0;transition:background 0.3s}
+  .toggle.on{background:#059669}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;
+    width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.3s;
+    box-shadow:0 1px 2px rgba(0,0,0,0.2)}
+  .toggle.on::after{transform:translateX(16px)}
+  .stats{max-width:1200px;margin:0 auto;padding:0 10px 8px;
+    display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+  .sb{background:#efede8;border:1px solid #d4d0c8;
+    border-radius:3px;padding:4px 10px;text-align:center}
+  .sb .v{font-family:'JetBrains Mono';font-size:1rem;font-weight:600;color:#1a1a1a}
+  .sb .l{font-size:0.6rem;color:#777;text-transform:uppercase;letter-spacing:0.03em;
+    font-family:'Source Serif 4',Georgia,serif}
+  .mono{font-family:'JetBrains Mono';font-size:0.7rem;color:#2563eb;min-width:24px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>The Double-Slit Experiment as a Moiré Effect</h1>
+  <p>Interactive companion to the paper by B. Sarıoğlu (2026)</p>
+  <p style="font-size:0.7rem;color:#888;margin-top:4px;font-style:normal">A purely Newtonian mechanism — no wave functions, no superposition — reproduces the quantum double-slit pattern with <span style="font-family:'JetBrains Mono';color:#2563eb">r ≈ 0.89</span> correlation. Adjust all parameters below to explore.</p>
+</div>
+
+<div class="wrap">
+  <canvas id="probC" width="580" height="260"></canvas>
+  <canvas id="histC" width="580" height="260"></canvas>
+</div>
+
+<div class="ctrls">
+  <div class="cg">
+    <button id="bFire" onclick="toggleFire()">▶ Fire</button>
+    <button class="danger" onclick="doReset()">Reset</button>
+  </div>
+  <div class="cg">
+    <label>Speed</label>
+    <input type="range" id="spdR" min="1" max="500" value="50">
+    <span class="mono" id="spdV">50</span>
+  </div>
+  <div class="cg">
+    <label>f(θ)</label>
+    <select id="fSel" onchange="rebuild()">
+      <option value="cos2" selected>cos² (paper default)</option>
+      <option value="cos">cos</option>
+      <option value="cos4">cos⁴</option>
+      <option value="arcsin">arcsin (dwell time)</option>
+      <option value="halfcos">half-cos (rotation)</option>
+      <option value="rect30">rect(30%)</option>
+      <option value="exp">exp</option>
+      <option value="tri">triangle</option>
+    </select>
+  </div>
+  <div class="cg">
+    <label>k/π</label>
+    <select id="kSel" onchange="rebuild()">
+      <option value="200">200</option>
+      <option value="1000">1,000</option>
+      <option value="5000">5,000</option>
+      <option value="10000">10,000</option>
+      <option value="50000" selected>50,000 (paper)</option>
+    </select>
+  </div>
+  <div class="cg">
+    <label>Slit distance</label>
+    <input type="range" id="slitR" min="1" max="100" value="20" oninput="liveUpdate()">
+    <span class="mono" id="slitV">Δk=10π</span>
+  </div>
+  <div class="cg">
+    <label>Bins</label>
+    <input type="number" id="binN" value="80" min="10" max="2000" step="10" onchange="rebuild()">
+  </div>
+  <div class="cg">
+    <label>Kill r</label>
+    <input type="number" id="killN" value="10" min="0" max="50" step="1" onchange="rebuild()">
+  </div>
+  <div class="cg">
+    <label>Slit 2</label>
+    <button id="bS2" class="toggle on" onclick="togS2()"></button>
+  </div>
+  <div class="cg">
+    <label>Memory</label>
+    <button id="bMem" class="toggle on" onclick="togMem()"></button>
+  </div>
+  <div class="cg">
+    <label>Envelope</label>
+    <select id="envSel" onchange="rebuild()">
+      <option value="sinc2" selected>sinc²</option>
+      <option value="sinc">|sinc|</option>
+      <option value="none">none</option>
+    </select>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="sb"><div class="v" id="sN">0</div><div class="l">Particles</div></div>
+  <div class="sb"><div class="v" id="sFr">—</div><div class="l">Fringes</div></div>
+  <div class="sb"><div class="v" id="sR">—</div><div class="l">r (memory)</div></div>
+  <div class="sb"><div class="v" id="sRL">—</div><div class="l">r (linear)</div></div>
+  <div class="sb"><div class="v" id="sA">—</div><div class="l">Alive sites</div></div>
+  <div class="sb"><div class="v" id="sM">Memory</div><div class="l">Readout</div></div>
+</div>
+
+<div style="max-width:800px;margin:8px auto;padding:4px 16px;font-size:0.65rem;color:#999;text-align:center;border-top:1px solid #e0ddd6">
+  <strong style="color:#777">Paper:</strong> B. Sarıoğlu, "A local ontological model of double-slit fringes via moiré sampling and non-linear detection" (2026).
+  All six probability functions produce fringes with r ∈ [0.81, 0.89]. cos² performs best (r = 0.891).
+  Linear readout gives r = 0.625 for all functions.
+</div>
+
+<script>
+// ═══════════════════════════════
+// ENGINE (peak-based, matching paper algorithm)
+// ═══════════════════════════════
+let NG = 80000; // grid resolution (recalculated per k)
+const N_PER_PERIOD = 20; // match paper
+let k1, k2, dk, kAvg, carrierPeriod, killRadius;
+let xGrid = new Float64Array(NG);
+let P1 = new Float64Array(NG);
+let P2 = new Float64Array(NG);
+let Ps = new Float64Array(NG);
+
+// Peak arrays (rebuilt on parameter change)
+let peakX = [], peakH = [], peakAlive = [], peakNeighbors = [], peakBin = [];
+let hitCount = [];
+let nPeaks = 0;
+
+let NB, hist, histLin, binEdges, binCenters;
+let linBinW, linTotal = 0;
+let nPart = 0, slit2 = true, mem = true, firing = false;
+
+// Probability functions
+function fCos(t)  { return 0.5*(1+Math.cos(t)); }
+function fCos2(t) { const c=0.5*(1+Math.cos(t)); return c*c; }
+function fCos4(t) { const c=0.5*(1+Math.cos(t)); return c*c*c*c; }
+function fRect(t) { return Math.cos(t) > Math.cos(0.3*Math.PI) ? 1 : 0; }
+function fExp(t)  { return Math.exp(2*(Math.cos(t)-1)); }
+function fTri(t)  { const c=t/(2*Math.PI); const fr=c-Math.floor(c); return fr<0.5?(1-2*fr):0; }
+// ARCSINE (dwell time): atom oscillates, dwell time ∝ 1/|velocity|.
+// Period 2π, one peak per carrier cycle (same as all other f).
+// ε=0.2 broadens peaks so grid can resolve them (same tooth count as cos²).
+function fArcsin(t) {
+  const s = Math.abs(Math.sin(t * 0.5));  // period 2π
+  const dwell = 1.0 / Math.max(s, 0.2);  // regularize (ε=0.2)
+  return dwell / 5.0;                      // normalize: max=1/0.2=5, /5→1.0
+}
+// Half-cos: max(0, cos(θ)). Only receptive in upper half.
+function fHalfCos(t) {
+  return Math.max(0, Math.cos(t));
+}
+
+let fProb = fCos2;
+
+function getF() {
+  const v = document.getElementById('fSel').value;
+  if (v==='cos') return fCos;
+  if (v==='cos2') return fCos2;
+  if (v==='cos4') return fCos4;
+  if (v==='arcsin') return fArcsin;
+  if (v==='halfcos') return fHalfCos;
+  if (v==='rect30') return fRect;
+  if (v==='exp') return fExp;
+  if (v==='tri') return fTri;
+  return fCos2;
+}
+
+function envelope(x) {
+  const mode = document.getElementById('envSel').value;
+  if (mode === 'none') return 1;
+  const u = 1.8 * x;
+  if (Math.abs(u) < 1e-12) return 1;
+  const pu = Math.PI * u;
+  const s = Math.sin(pu) / pu;
+  return mode === 'sinc2' ? s*s : Math.abs(s);
+}
+
+// Find local maxima with minimum distance (handles flat tops)
+// Picks the rightmost point of any plateau
+function findPeaks(arr, minDist) {
+  const peaks = [];
+  let lastPeak = -minDist - 1;
+  for (let i = minDist; i < arr.length - minDist; i++) {
+    if (arr[i] <= 0.001) continue;
+    // Must be strictly greater than right neighbor (edge of plateau)
+    if (arr[i] <= arr[i+1]) continue;
+    // Must be >= all left neighbors within minDist
+    let isMax = true;
+    for (let d = 1; d <= minDist; d++) {
+      if (arr[i] < arr[i-d] || arr[i] < arr[i+d]) { isMax = false; break; }
+    }
+    if (isMax && (i - lastPeak) > minDist) {
+      peaks.push(i);
+      lastPeak = i;
+    }
+  }
+  return peaks;
+}
+
+function rebuild() {
+  const kBase = parseInt(document.getElementById('kSel').value);
+  const slitVal = parseInt(document.getElementById('slitR').value);
+  const dkBase = slitVal * 0.5;
+  k1 = kBase * Math.PI;
+  k2 = (kBase + dkBase) * Math.PI;
+  dk = k2 - k1;
+  kAvg = (k1 + k2) / 2;
+  carrierPeriod = 2 * Math.PI / kAvg;
+  document.getElementById('slitV').textContent = `Δk=${dkBase.toFixed(1)}π`;
+
+  const killMult = parseInt(document.getElementById('killN').value);
+  killRadius = killMult * carrierPeriod;
+
+  // Dynamic grid resolution: 20 pts per carrier period (like paper)
+  NG = Math.min(500000, Math.max(40000, Math.floor(1.0 / carrierPeriod * N_PER_PERIOD)));
+  xGrid = new Float64Array(NG);
+  P1 = new Float64Array(NG);
+  P2 = new Float64Array(NG);
+  Ps = new Float64Array(NG);
+
+  fProb = getF();
+
+  const dx = 1.0 / (NG - 1);
+  for (let i = 0; i < NG; i++) {
+    xGrid[i] = -0.5 + i * dx;
+  }
+
+  NB = parseInt(document.getElementById('binN').value);
+  hist = new Float64Array(NB);
+  histLin = new Float64Array(NB);
+  binEdges = new Float64Array(NB + 1);
+  binCenters = new Float64Array(NB);
+  for (let i = 0; i <= NB; i++) binEdges[i] = -0.5 + i / NB;
+  for (let i = 0; i < NB; i++) binCenters[i] = 0.5*(binEdges[i]+binEdges[i+1]);
+
+  computeP();
+  buildPeaks();
+  doReset();
+}
+
+function computeP() {
+  for (let i = 0; i < NG; i++) {
+    const x = xGrid[i];
+    const env = envelope(x);
+    P1[i] = env * fProb(k1 * x);
+    P2[i] = env * fProb(k2 * x);
+    Ps[i] = slit2 ? P1[i] + P2[i] : P1[i];
+  }
+}
+
+function buildPeaks() {
+  const dx = xGrid[1] - xGrid[0];
+  const minDist = Math.max(1, Math.floor(0.4 * carrierPeriod / dx));
+
+  // Find peaks per slit separately, then merge (fixes flat-top rect bias)
+  let pIdx;
+  if (slit2) {
+    const p1 = findPeaks(P1, minDist);
+    const p2 = findPeaks(P2, minDist);
+    // Merge and deduplicate (sort + unique)
+    const merged = new Set();
+    for (const i of p1) { if (Ps[i] > 0.001) merged.add(i); }
+    for (const i of p2) { if (Ps[i] > 0.001) merged.add(i); }
+    pIdx = Array.from(merged).sort((a,b) => a-b);
+  } else {
+    pIdx = findPeaks(Ps, minDist);
+  }
+
+  nPeaks = pIdx.length;
+  peakX = new Float64Array(nPeaks);
+  peakH = new Float64Array(nPeaks);
+  peakBin = new Int32Array(nPeaks);
+
+  for (let i = 0; i < nPeaks; i++) {
+    peakX[i] = xGrid[pIdx[i]];
+    peakH[i] = Ps[pIdx[i]];
+    // Which histogram bin does this peak fall in?
+    peakBin[i] = Math.floor((peakX[i] + 0.5) * NB);
+    if (peakBin[i] >= NB) peakBin[i] = NB - 1;
+    if (peakBin[i] < 0) peakBin[i] = 0;
+  }
+
+  // Build neighbor lists (peaks within kill radius)
+  peakNeighbors = new Array(nPeaks);
+  for (let i = 0; i < nPeaks; i++) {
+    const nbrs = [];
+    // Search left
+    for (let j = i - 1; j >= 0; j--) {
+      if (peakX[i] - peakX[j] > killRadius) break;
+      nbrs.push(j);
+    }
+    // Search right
+    for (let j = i + 1; j < nPeaks; j++) {
+      if (peakX[j] - peakX[i] > killRadius) break;
+      nbrs.push(j);
+    }
+    peakNeighbors[i] = nbrs;
+  }
+
+  peakAlive = new Uint8Array(nPeaks);
+  hitCount = new Float64Array(nPeaks);
+
+  // Precompute binned P_sum for linear sampling (full grid, no peak bias)
+  linBinW = new Float64Array(NB);
+  linTotal = 0;
+  for (let i = 0; i < NG; i++) {
+    const b = Math.floor((xGrid[i] + 0.5) * NB);
+    if (b >= 0 && b < NB) linBinW[b] += Ps[i];
+  }
+  for (let b = 0; b < NB; b++) linTotal += linBinW[b];
+}
+
+function doReset() {
+  nPart = 0;
+  if (hist) hist.fill(0);
+  if (histLin) histLin.fill(0);
+  if (peakAlive) peakAlive.fill(1);
+  if (hitCount) hitCount.fill(0);
+  // Rebuild histogram from hit counts (empty)
+  firing = false;
+  document.getElementById('bFire').textContent = '▶ Fire';
+  document.getElementById('bFire').classList.remove('on');
+}
+
+function nAlive() { let c=0; for(let i=0;i<nPeaks;i++) c+=peakAlive[i]; return c; }
+
+function fireN(n) {
+  for (let p = 0; p < n; p++) {
+    // Memory: sample from alive peaks weighted by height
+    let totMem = 0;
+    for (let i = 0; i < nPeaks; i++) totMem += peakH[i] * peakAlive[i];
+    if (totMem > 0) {
+      let r = Math.random() * totMem, cum = 0;
+      for (let i = 0; i < nPeaks; i++) {
+        cum += peakH[i] * peakAlive[i];
+        if (cum >= r) {
+          hitCount[i]++;
+          // Kill neighbors
+          const nbrs = peakNeighbors[i];
+          for (let j = 0; j < nbrs.length; j++) peakAlive[nbrs[j]] = 0;
+          break;
+        }
+      }
+    }
+
+    // Linear: sample from binned P_sum (full grid average, no peak bias)
+    {
+      let r = Math.random() * linTotal, cum = 0;
+      for (let b = 0; b < NB; b++) {
+        cum += linBinW[b];
+        if (cum >= r) {
+          histLin[b]++;
+          break;
+        }
+      }
+    }
+
+    nPart++;
+  }
+
+  // Rebuild memory histogram from hit counts
+  hist.fill(0);
+  for (let i = 0; i < nPeaks; i++) {
+    const b = peakBin[i];
+    if (b >= 0 && b < NB) hist[b] += hitCount[i];
+  }
+}
+
+// QM prediction
+function qmPred(x) {
+  const env = envelope(x);
+  if (!slit2) return env;
+  return env * Math.cos(dk * x / 2)**2;
+}
+
+function corr(h) {
+  if (nPart < 10) return NaN;
+  const q = new Float64Array(NB);
+  for (let i = 0; i < NB; i++) q[i] = qmPred(binCenters[i]);
+  let mH=0,mQ=0;
+  for (let i=0;i<NB;i++){mH+=h[i];mQ+=q[i]}
+  mH/=NB;mQ/=NB;
+  let num=0,d1=0,d2=0;
+  for(let i=0;i<NB;i++){
+    const hv=h[i]-mH,qv=q[i]-mQ;
+    num+=hv*qv;d1+=hv*hv;d2+=qv*qv;
+  }
+  const dn=Math.sqrt(d1*d2);
+  return dn>0?num/dn:0;
+}
+
+// ═══════════════════════════════
+// DRAWING
+// ═══════════════════════════════
+const pC = document.getElementById('probC');
+const pX = pC.getContext('2d');
+const hC = document.getElementById('histC');
+const hX = hC.getContext('2d');
+
+function drawProb() {
+  const c=pX, W=pC.width, H=pC.height;
+  c.clearRect(0,0,W,H);
+  c.fillStyle='#ffffff';c.fillRect(0,0,W,H);
+
+  const m={t:25,r:10,b:30,l:40};
+  const pW=W-m.l-m.r, pH=H-m.t-m.b;
+
+  // Find max
+  let mx=0.01;
+  for(let i=0;i<NG;i++) mx=Math.max(mx,Ps[i]);
+
+  // Draw probability
+  c.beginPath();
+  c.strokeStyle='#2563eb';
+  c.lineWidth=0.5;
+  // Sample every few points for performance
+  const step = Math.max(1, Math.floor(NG/pW/2));
+  for(let i=0;i<NG;i+=step){
+    const px=m.l+(xGrid[i]+0.5)*pW;
+    const py=m.t+pH-(Ps[i]/mx)*pH;
+    if(i===0)c.moveTo(px,py);else c.lineTo(px,py);
+  }
+  c.stroke();
+
+  // QM envelope
+  c.beginPath();
+  c.strokeStyle='#dc2626';c.lineWidth=1.5;
+  for(let i=0;i<200;i++){
+    const x=-0.5+i/199;
+    const q=qmPred(x);
+    const px=m.l+(x+0.5)*pW;
+    const py=m.t+pH-(q*(slit2?2:1)/mx)*pH;
+    if(i===0)c.moveTo(px,py);else c.lineTo(px,py);
+  }
+  c.stroke();
+
+
+
+
+  // Axes
+  c.strokeStyle='#bbb';c.lineWidth=1;
+  c.beginPath();c.moveTo(m.l,m.t);c.lineTo(m.l,m.t+pH);
+  c.lineTo(m.l+pW,m.t+pH);c.stroke();
+
+  c.fillStyle='#777';c.font='9px Source Serif 4, Georgia';c.textAlign='center';
+  c.fillText('-0.5',m.l,m.t+pH+14);
+  c.fillText('0',m.l+pW/2,m.t+pH+14);
+  c.fillText('0.5',m.l+pW,m.t+pH+14);
+  c.fillText('Screen position x',m.l+pW/2,m.t+pH+26);
+
+  // Title
+  c.fillStyle='#333';c.font='italic 11px Source Serif 4, Georgia';
+  c.fillText('P₁ + P₂  (microstripe probability)',W/2,14);
+
+  // Legend
+  c.fillStyle='#2563eb';c.fillRect(W-120,8,10,2);
+  c.fillStyle='#777';c.font='8px Source Serif 4, Georgia';c.textAlign='left';
+  c.fillText('P_sum',W-106,11);
+  c.strokeStyle='#dc2626';c.lineWidth=1.5;
+  c.beginPath();c.moveTo(W-120,20);c.lineTo(W-110,20);c.stroke();
+  c.fillText('QM envelope',W-106,23);
+}
+
+function drawHist() {
+  const c=hX, W=hC.width, H=hC.height;
+  c.clearRect(0,0,W,H);
+  c.fillStyle='#ffffff';c.fillRect(0,0,W,H);
+
+  const m={t:25,r:10,b:30,l:40};
+  const pW=W-m.l-m.r, pH=H-m.t-m.b;
+
+  const h = mem ? hist : histLin;
+  let mx=1;
+  for(let i=0;i<NB;i++) mx=Math.max(mx,h[i]);
+
+  // QM reference
+  const q=new Float64Array(NB);
+  let mxQ=0;
+  for(let i=0;i<NB;i++){q[i]=qmPred(binCenters[i]);mxQ=Math.max(mxQ,q[i])}
+  const qS=mxQ>0?mx/mxQ:1;
+
+  // Bars
+  const bW=pW/NB;
+  for(let i=0;i<NB;i++){
+    const bH=(h[i]/mx)*pH;
+    const bx=m.l+i*bW;
+    const by=m.t+pH-bH;
+    c.fillStyle='rgba(37,99,235,0.55)';
+    c.fillRect(bx+0.5,by,bW-1,bH);
+  }
+
+  // Also draw linear readout as faint bars behind
+  if(mem && nPart>0){
+    let mxL=1;
+    for(let i=0;i<NB;i++) mxL=Math.max(mxL,histLin[i]);
+    for(let i=0;i<NB;i++){
+      const bH=(histLin[i]/mxL)*pH*0.3;
+      const bx=m.l+i*bW;
+      const by=m.t+pH-bH;
+      c.fillStyle='rgba(217,119,6,0.15)';
+      c.fillRect(bx+0.5,by,bW-1,bH);
+    }
+  }
+
+  // QM curve
+  if(nPart>0){
+    c.beginPath();c.strokeStyle='#dc2626';c.lineWidth=1.5;
+    for(let i=0;i<NB;i++){
+      const bx=m.l+(i+0.5)*bW;
+      const by=m.t+pH-(q[i]*qS/mx)*pH;
+      i===0?c.moveTo(bx,by):c.lineTo(bx,by);
+    }
+    c.stroke();
+  }
+
+  // Axes
+  c.strokeStyle='#bbb';c.lineWidth=1;
+  c.beginPath();c.moveTo(m.l,m.t);c.lineTo(m.l,m.t+pH);
+  c.lineTo(m.l+pW,m.t+pH);c.stroke();
+
+  c.fillStyle='#777';c.font='9px Source Serif 4, Georgia';c.textAlign='center';
+  c.fillText('-0.5',m.l,m.t+pH+14);
+  c.fillText('0',m.l+pW/2,m.t+pH+14);
+  c.fillText('0.5',m.l+pW,m.t+pH+14);
+  c.fillText('Screen position x',m.l+pW/2,m.t+pH+26);
+
+  c.fillStyle='#333';c.font='italic 11px Source Serif 4, Georgia';
+  c.fillText(mem?'Histogram (screen memory)':'Histogram (linear readout)',W/2,14);
+
+  // Legend
+  c.fillStyle='#2563eb';c.fillRect(W-110,6,10,3);
+  c.fillStyle='#777';c.font='8px Source Serif 4, Georgia';c.textAlign='left';
+  c.fillText(mem?'memory':'linear',W-96,10);
+  if(nPart>0){
+    c.strokeStyle='#dc2626';c.lineWidth=1.5;
+    c.beginPath();c.moveTo(W-110,20);c.lineTo(W-100,20);c.stroke();
+    c.fillText('QM',W-96,23);
+  }
+  if(mem){
+    c.fillStyle='rgba(217,119,6,0.35)';c.fillRect(W-110,30,10,3);
+    c.fillStyle='#777';c.fillText('linear (bg)',W-96,34);
+  }
+}
+
+function updStats() {
+  document.getElementById('sN').textContent = nPart.toLocaleString();
+  document.getElementById('spdV').textContent = document.getElementById('spdR').value;
+  document.getElementById('sM').textContent = mem?'Memory':'Linear';
+  document.getElementById('sM').style.color = mem?'#10b981':'#818cf8';
+  document.getElementById('sA').textContent = mem?nAlive().toLocaleString():'—';
+  // Fringe count
+  const nFringes = Math.round(dk/(2*Math.PI));
+  document.getElementById('sFr').textContent = slit2 ? `~${nFringes}` : '—';
+
+  const rMem = corr(hist);
+  const rLin = corr(histLin);
+  if(!isNaN(rMem)){
+    document.getElementById('sR').textContent = rMem.toFixed(3);
+    document.getElementById('sR').style.color = rMem>0.7?'#059669':rMem>0.4?'#d97706':'#1a1a1a';
+  } else document.getElementById('sR').textContent='—';
+  if(!isNaN(rLin)){
+    document.getElementById('sRL').textContent = rLin.toFixed(3);
+  } else document.getElementById('sRL').textContent='—';
+}
+
+function animate() {
+  if(firing){
+    const n=parseInt(document.getElementById('spdR').value);
+    fireN(n);
+  }
+  drawProb();
+  drawHist();
+  updStats();
+  requestAnimationFrame(animate);
+}
+
+// UI
+function toggleFire(){
+  firing=!firing;
+  const b=document.getElementById('bFire');
+  b.textContent=firing?'⏸ Pause':'▶ Fire';
+  if(firing)b.classList.add('on');else b.classList.remove('on');
+}
+function togS2(){
+  slit2=!slit2;
+  document.getElementById('bS2').classList.toggle('on');
+  computeP();buildPeaks();doReset();
+}
+function togMem(){
+  mem=!mem;
+  document.getElementById('bMem').classList.toggle('on');
+}
+function liveUpdate(){
+  // Live update: recompute probabilities without full reset
+  const kBase = parseInt(document.getElementById('kSel').value);
+  const slitVal = parseInt(document.getElementById('slitR').value);
+  const dkBase = slitVal * 0.5;
+  k1 = kBase * Math.PI;
+  k2 = (kBase + dkBase) * Math.PI;
+  dk = k2 - k1;
+  kAvg = (k1 + k2) / 2;
+  carrierPeriod = 2 * Math.PI / kAvg;
+  const killMult = parseInt(document.getElementById('killN').value);
+  killRadius = killMult * carrierPeriod;
+  document.getElementById('slitV').textContent = `Δk=${dkBase.toFixed(1)}π`;
+  computeP();
+  buildPeaks();
+  // Don't reset histogram — let user see the live probability change
+}
+
+// Init
+rebuild();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
