@@ -218,3 +218,16 @@ plt.savefig(os.path.join(out_dir, 'fig_screen_memory.png'),
 plt.savefig(os.path.join(out_dir, 'fig_screen_memory.pdf'),
             bbox_inches='tight')
 print("\nSaved fig_screen_memory")
+
+# Print Table 2: Local baseline thresholding sweep
+print("\nTABLE 2 — Local Baseline Thresholding Sweep:")
+surv_x = peak_x[alive]
+surv_h = peak_h[alive]
+surv_env = np.sinc(1.8 * surv_x)**2
+for tau in [0.0, 0.5, 0.75, 0.9, 1.0]:
+    w_th = np.maximum(0.0, surv_h - tau * surv_env)
+    w_th /= np.sum(w_th)
+    hits_th = rng.choice(surv_x, size=N_total, p=w_th)
+    hist_th, _ = np.histogram(hits_th, bins=bin_edges)
+    r_th = np.corrcoef(hist_th, qm_hist)[0, 1]
+    print(f"  tau = {tau:.2f} -> r(MC) = {r_th:.3f}")

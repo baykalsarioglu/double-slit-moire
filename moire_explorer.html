@@ -54,7 +54,7 @@
 <div class="hdr">
   <h1>The Double-Slit Experiment as a Moiré Effect</h1>
   <p>Interactive companion to the paper by B. Sarıoğlu (2026)</p>
-  <p style="font-size:0.7rem;color:#888;margin-top:4px;font-style:normal">A classical particle-only spatial-sampling mechanism — via moiré beating of positive probability combs and nonlinear detector memory — reproduces the double-slit interference envelope with <span style="font-family:'JetBrains Mono';color:#2563eb">r ≈ 0.89</span> correlation. Adjust all parameters below to explore.</p>
+  <p style="font-size:0.7rem;color:#888;margin-top:4px;font-style:normal">A classical particle-only spatial-sampling mechanism — via moiré beating of positive probability combs and nonlinear detector memory — reproduces the double-slit interference envelope with <span style="font-family:'JetBrains Mono';color:#2563eb">r ≈ 0.89</span> (unthresholded) and <span style="font-family:'JetBrains Mono';color:#059669">r > 0.99</span> (with local thresholding). Adjust all parameters below to explore.</p>
 </div>
 
 <div class="wrap">
@@ -117,6 +117,16 @@
     <button id="bMem" class="toggle on" onclick="togMem()"></button>
   </div>
   <div class="cg">
+    <label>Threshold τ</label>
+    <select id="tauSel" onchange="rebuild()">
+      <option value="0" selected>0.00 (none, r≈0.89)</option>
+      <option value="0.5">0.50 (r≈0.96)</option>
+      <option value="0.75">0.75 (mean flux, r≈0.99)</option>
+      <option value="0.9">0.90 (r≈0.997)</option>
+      <option value="1.0">1.00 (pedestal, V=1)</option>
+    </select>
+  </div>
+  <div class="cg">
     <label>Envelope</label>
     <select id="envSel" onchange="rebuild()">
       <option value="sinc2" selected>sinc²</option>
@@ -137,7 +147,7 @@
 
 <div style="max-width:800px;margin:8px auto;padding:4px 16px;font-size:0.65rem;color:#999;text-align:center;border-top:1px solid #e0ddd6">
   <strong style="color:#777">Paper:</strong> B. Sarıoğlu, "Extracting double-slit interference envelopes from classical probability combs via moiré sampling and nonlinear detector memory" (2026).
-  All six probability functions produce fringes with r ∈ [0.81, 0.89]. cos² performs best (r = 0.891; exact analytical envelope r = 0.892).
+  Unthresholded lateral depletion (τ = 0) produces fringes with r ∈ [0.81, 0.89] across all six f(θ) profiles (cos² gives r = 0.892). Adding local baseline thresholding (τ ∈ [0.75, 1.00]) suppresses the interlaced dark-fringe floor and reaches r = 0.988–0.997 (V → 1.00).
   Linear readout gives r = 0.625 for all functions.
 </div>
 
@@ -303,9 +313,12 @@ function buildPeaks() {
   peakH = new Float64Array(nPeaks);
   peakBin = new Int32Array(nPeaks);
 
+  const tau = parseFloat(document.getElementById('tauSel').value);
   for (let i = 0; i < nPeaks; i++) {
     peakX[i] = xGrid[pIdx[i]];
-    peakH[i] = Ps[pIdx[i]];
+    const rawH = Ps[pIdx[i]];
+    const env = slit2 ? envelope(peakX[i]) : 0;
+    peakH[i] = Math.max(0, rawH - tau * env);
     // Which histogram bin does this peak fall in?
     peakBin[i] = Math.floor((peakX[i] + 0.5) * NB);
     if (peakBin[i] >= NB) peakBin[i] = NB - 1;
