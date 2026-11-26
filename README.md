@@ -8,16 +8,18 @@ Companion simulation suite and interactive web application for:
 
 ## [▶ Launch Interactive Web Explorer (with 2D Tonomura Buildup Screen)](https://baykalsarioglu.github.io/double-slit-moire/moire_explorer.html)
 
+![Double-Slit Interference Fringes via Moiré Sampling & Nonlinear Detection — 3-Step Visual Summary](assets/moire_overview.png)
+
 ---
 
 ## Overview
 
-Textbook impossibility arguments for the double-slit experiment conclude that adding single-slit classical probabilities ($P_{12} = P_1 + P_2$) cannot produce interference fringes. This repository demonstrates the unstated premise behind that conclusion—**linear, passive detector readout**—and provides a complete analytical and numerical toolkit for extracting interference envelopes from summed positive probability combs:
+Textbook impossibility arguments for the double-slit experiment conclude that adding single-slit classical probabilities ($P_{12} = P_1 + P_2$) cannot produce interference fringes. This repository demonstrates the hidden premise behind that conclusion—**linear, memoryless pixel integration**—and provides a complete analytical and numerical toolkit for extracting interference envelopes from summed positive probability combs (**no waves · particle only · one slit per particle**):
 
-1. **Multi-Harmonic Moiré Carrier Beat:** Summing two non-negative periodic acceptance combs $P_j(y) = S(y)\,f(k\cdot d_j(y))$ generates a high-frequency spatial carrier whose upper envelope modulates at the exact double-slit interference phase $\delta(y) = k\,\Delta d(y)$.
+1. **Multi-Harmonic Moiré Carrier Beat & Dual Phase Equivalence:** Summing two non-negative periodic acceptance combs $P_j(y) = S(y)\,f(k\cdot d_j(y) + \varphi_0)$ generates a high-frequency spatial carrier whose upper envelope modulates at the exact double-slit interference phase $\delta(y) = k\,\Delta d(y)$. Identical mathematics holds whether the periodic phase is carried internally by the projectile along its straight path onto a quasi-static screen (avoiding ultra-fast mechanical screen vibrations) or arises from oscillating detector acceptance.
 2. **Exact Pitchfork Bifurcation & Analytical Envelope:** For $f(\theta) = [\tfrac{1}{2}(1+\cos\theta)]^2$, the carrier peaks undergo a supercritical pitchfork bifurcation at $|\cos(\delta/2)| = 1/2$ ($\delta \equiv \pm 2\pi/3 \pmod{2\pi}$), yielding an exact piecewise closed-form peak envelope $E_{\text{peak}}(y)$ with Pearson correlation $r(E_{\text{peak}}, I_{\text{QM}}) = 0.892$ and fringe visibility $V \approx 0.646$.
-3. **Asymptotic Low-Pass Erasure:** Linear pixel integration over $W \gg \lambda_{\text{dB}}$ cancels all oscillatory harmonics as $\mathcal{O}(\lambda_{\text{dB}}/W)$, recovering the smooth classical sum $2\bar{f}\,S(y)$ ($r = 0.625$).
-4. **Nonlinear Detector Memory (Lateral Depletion) & Local Thresholding:** A height-biased spatial dead-time / lateral-depletion Markov process ($R_{\text{kill}} \gg \lambda_{\text{dB}}$) acts as a spatial envelope detector, converging in finite stopping time to a jammed survivor set that tracks $E_{\text{peak}}(y)$ ($r = 0.891\text{–}0.895$, $V \approx 0.65$ under unthresholded readout). Incorporating a local registration threshold calibrated to the local mean arrival rate ($\Theta = 2\bar{f}\,S(y)$, available strictly locally) suppresses the interlaced destructive pedestal, raising agreement with the quantum intensity profile to $r = 0.988\text{–}0.997$ and restoring unit fringe visibility ($V \to 1.00$).
+3. **Asymptotic Low-Pass Erasure (Why Linear Pixels Fail):** Linear pixel integration over $W \gg \lambda_{\text{dB}}$ cancels all oscillatory harmonics as $\mathcal{O}(\lambda_{\text{dB}}/W)$, leaving the smooth classical sum $2\bar{f}\,S(y)$ ($r = 0.626$).
+4. **Nonlinear Detection (Spatial Dead Time & Local Thresholding):** Standard physical sensor nonlinearities—spatial dead time ($R_{\text{kill}} \gg \lambda_{\text{dB}}$) and local baseline thresholding calibrated to the mean arrival rate ($\Theta = 2\bar{f}\,S(y)$)—act as a spatial envelope detector, reaching $r = 0.988\text{–}0.997$ and restoring unit fringe visibility ($V \to 1.00$).
 
 ---
 
