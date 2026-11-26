@@ -1,10 +1,12 @@
 # Extracting Double-Slit Interference Envelopes from Classical Probability Combs via Moiré Sampling and Nonlinear Detector Memory
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24541000.svg)](https://doi.org/10.5281/zenodo.24541000)
+
 Companion simulation suite and interactive web application for:
 
-**B. Sarioglu**, *"Extracting double-slit interference envelopes from classical probability combs via moiré sampling and nonlinear detector memory"* (2026).
+**B. Sarioglu**, *"Extracting double-slit interference envelopes from classical probability combs via moiré sampling and nonlinear detector memory"* (2026) — **Preprint:** [https://doi.org/10.5281/zenodo.24541000](https://doi.org/10.5281/zenodo.24541000)
 
-## [▶ Launch Interactive Web Explorer](https://baykalsarioglu.github.io/double-slit-moire/moire_explorer.html)
+## [▶ Launch Interactive Web Explorer (with 2D Tonomura Buildup Screen)](https://baykalsarioglu.github.io/double-slit-moire/moire_explorer.html)
 
 ---
 
